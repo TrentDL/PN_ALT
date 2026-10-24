@@ -100,6 +100,28 @@ ScriptedImporter:
     spritePosition: {x: 0, y: 0}
   multiSpriteImportData: []
   layeredSpriteImportData:
+  - name: window_mask Copy
+    originalName: 
+    pivot: {x: 0.5, y: 0.5}
+    alignment: 0
+    border: {x: 0, y: 0, z: 0, w: 0}
+    customData: 
+    rect:
+      serializedVersion: 2
+      x: 4
+      y: 4
+      width: 4167
+      height: 2680
+    spriteID: c58f28968cef3bb4282e4e266fc42360
+    spriteBone: []
+    spriteOutline: []
+    vertices: []
+    spritePhysicsOutline: []
+    indices: 
+    edges: []
+    tessellationDetail: 0
+    uvTransform: {x: 4, y: 4}
+    spritePosition: {x: 0, y: 0}
   - name: Vents
     originalName: 
     pivot: {x: 0.5, y: 0.5}
@@ -122,28 +144,6 @@ ScriptedImporter:
     tessellationDetail: 0
     uvTransform: {x: 7224, y: 4}
     spritePosition: {x: 3340, y: 996}
-  - name: window_mask Copy
-    originalName: 
-    pivot: {x: 0.5, y: 0.5}
-    alignment: 0
-    border: {x: 0, y: 0, z: 0, w: 0}
-    customData: 
-    rect:
-      serializedVersion: 2
-      x: 4
-      y: 4
-      width: 4177
-      height: 2685
-    spriteID: c58f28968cef3bb4282e4e266fc42360
-    spriteBone: []
-    spriteOutline: []
-    vertices: []
-    spritePhysicsOutline: []
-    indices: 
-    edges: []
-    tessellationDetail: 0
-    uvTransform: {x: 4, y: 4}
-    spritePosition: {x: 0, y: 0}
   - name: Top Window
     originalName: 
     pivot: {x: 0.5, y: 0.5}
@@ -407,28 +407,6 @@ ScriptedImporter:
     edges: []
     tessellationDetail: 0
     uvTransform: {x: 4, y: 2692}
-    spritePosition: {x: 0, y: 0}
-  - name: Outsideclub.10.21_0
-    originalName: 
-    pivot: {x: 0.5, y: 0.5}
-    alignment: 0
-    border: {x: 0, y: 0, z: 0, w: 0}
-    customData: 
-    rect:
-      serializedVersion: 2
-      x: 0
-      y: 0
-      width: 4176
-      height: 2682
-    spriteID: 6250729f99bd7304a8e46c00c665705a
-    spriteBone: []
-    spriteOutline: []
-    vertices: []
-    spritePhysicsOutline: []
-    indices: 
-    edges: []
-    tessellationDetail: 0
-    uvTransform: {x: 0, y: 0}
     spritePosition: {x: 0, y: 0}
   spriteImportData: []
   rigSpriteImportData: []

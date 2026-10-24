@@ -1202,18 +1202,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 1933378104629710098, guid: cae28de6286b5944e97737820c6b7c67, type: 3}
-      propertyPath: m_SortingOrder
-      value: 136
-      objectReference: {fileID: 0}
-    - target: {fileID: 2311730801294396205, guid: cae28de6286b5944e97737820c6b7c67, type: 3}
-      propertyPath: m_IsActive
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6315818133945584484, guid: cae28de6286b5944e97737820c6b7c67, type: 3}
-      propertyPath: m_SortingOrder
-      value: -321
-      objectReference: {fileID: 0}
     - target: {fileID: -8653719598885068355, guid: e9b6407b416f8024e9621700e58b50df, type: 3}
       propertyPath: m_Name
       value: Outsideclub.10.21
@@ -1316,7 +1304,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5378099597153261374, guid: e9b6407b416f8024e9621700e58b50df, type: 3}
       propertyPath: m_SortingOrder
-      value: -1223
+      value: -1222
       objectReference: {fileID: 0}
     - target: {fileID: 6200155690118484603, guid: e9b6407b416f8024e9621700e58b50df, type: 3}
       propertyPath: m_SortingOrder
@@ -1333,6 +1321,18 @@ PrefabInstance:
     - target: {fileID: 8788517511296180541, guid: e9b6407b416f8024e9621700e58b50df, type: 3}
       propertyPath: m_SortingOrder
       value: -1223
+      objectReference: {fileID: 0}
+    - target: {fileID: 1933378104629710098, guid: cae28de6286b5944e97737820c6b7c67, type: 3}
+      propertyPath: m_SortingOrder
+      value: 136
+      objectReference: {fileID: 0}
+    - target: {fileID: 2311730801294396205, guid: cae28de6286b5944e97737820c6b7c67, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6315818133945584484, guid: cae28de6286b5944e97737820c6b7c67, type: 3}
+      propertyPath: m_SortingOrder
+      value: -321
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
