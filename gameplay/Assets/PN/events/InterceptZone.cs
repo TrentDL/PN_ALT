@@ -17,6 +17,9 @@
 // Pass 6 (fade suppression): ADDED the read-only IsApplied property, so PlayerVisibility
 // can ask "has this zone pushed my sprite behind the player right now?" without
 // duplicating the polygon test. Nothing about how the zone sorts has changed.
+// Pass 7 (jump-aware zones): the polygon test now uses the watched object's GROUND point
+// (via IGroundPosition) instead of its raw transform. Jumping lifts the transform up the
+// screen, out of the floor polygon, which used to trigger the exit/restore mid-jump.
 
 using UnityEngine;
 // Pass 3 (Live2D removal): replaced the Cubism interceptor namespace with Unity's own.
@@ -52,6 +55,20 @@ public class InterceptZone : MonoBehaviour
     [Header("Debug Visualization")]
     public bool showDebugGizmos = true;
 
+    // Pass 8 (sort readout): ADDED. Shows each resolved sprite's live Order in Layer, in the same
+    // order as the interceptors list (skipped entries are left out).
+    // WHY [SerializeField] private instead of public: the Inspector can SHOW it, but no other
+    // script can write to it (encapsulation). Typing a value here does nothing useful -
+    // Update overwrites it every frame, because this is a mirror, not a setting.
+    // WHY copied every frame rather than only in SetOrder/Restore: those only catch OUR writes.
+    // A per-frame copy also catches anything else changing the order, which is the reason
+    // holdWhileInside exists - so this is what lets you see that happen.
+    // Only fills in Play mode (Awake/Update don't run in Edit mode).
+    // Unity Script API - SerializeField: https://docs.unity3d.com/6000.0/Documentation/ScriptReference/SerializeField.html
+    // Unity Script API - Renderer.sortingOrder: https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer-sortingOrder.html
+    [Tooltip("Display only (Play mode). Live Order in Layer of each sprite - overwritten every frame.")]
+    [SerializeField] private int[] currentOrders;
+
     private PolygonCollider2D area;
     private bool wasInside = false;               // edge detection - act on ENTRY, not every frame
     private float exitTime = -1f;                 // when they left; negative means inside
@@ -62,6 +79,13 @@ public class InterceptZone : MonoBehaviour
     // Pass 5 (SpriteRenderer target): SortingGroup[] -> Renderer[]. Renderer is the parent type of
     // SpriteRenderer, so a Sprite Renderer fits (polymorphism).
     private int[] originalOrders;                 // whatever was authored, captured not hardcoded
+
+    // Pass 7 (jump-aware zones): ADDED. Found once in Awake on the watched object.
+    // Null means "this object doesn't jump" - the zone then falls back to its plain position,
+    // so props or NPCs without the interface still work exactly as before.
+    // WHY NOT a public field to drag into: Unity's Inspector cannot show interface-typed fields,
+    // and the watched object already IS the thing we want - no second slot to forget to fill.
+    private IGroundPosition groundSource;
 
     // Pass 6 (fade suppression): ADDED. True from the first SetOrder until Restore puts the
     // authored order back - so it also stays true during restoreDelay, while the player is
@@ -77,6 +101,11 @@ public class InterceptZone : MonoBehaviour
     void Awake()
     {
         area = GetComponent<PolygonCollider2D>();
+
+        // Pass 7 (jump-aware zones): ADDED. GetComponent accepts an interface type, so this finds
+        // PlayerControl4 (or any future jumper) without InterceptZone ever naming that class.
+        // Unity Script API - Component.GetComponent: https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Component.GetComponent.html
+        groundSource = watched.GetComponent<IGroundPosition>();
 
         // ADDED: two-pass fill into plain arrays. Bad entries are dropped here rather than
         // null-checked every frame in SetOrder. Arrays only - no extra namespace needed.
@@ -115,6 +144,10 @@ public class InterceptZone : MonoBehaviour
         for (int i = 0; i < resolved.Length; i++)
             originalOrders[i] = resolved[i].sortingOrder;
         // Pass 3 (Live2D removal): SortingOrder -> sortingOrder (Unity's name for it).
+
+        currentOrders = new int[resolved.Length];
+        // Pass 8 (sort readout): ADDED. Sized once to match resolved, so Update only copies
+        // numbers and never allocates (no per-frame garbage).
     }// end of function >:D
 
     // ADDED: accepts the component itself, or finds it on that object or a child. Your
@@ -132,9 +165,21 @@ public class InterceptZone : MonoBehaviour
         return c.GetComponentInChildren<Renderer>();
     }// end of function >:D
 
+    // Pass 7 (jump-aware zones): ADDED. The one place that decides WHICH point gets tested.
+    // Kept as its own method so Update reads as "is the point inside?" and the jump rule
+    // can be changed here without touching the entry/exit logic.
+    // Microsoft C# - conditional operator ?: : https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/operators/conditional-operator
+    private Vector2 TestPoint()
+    {
+        return groundSource != null ? groundSource.GroundPosition : (Vector2)watched.position;
+    }// end of function >:D
+
     void Update()
     {
-        bool inside = area.OverlapPoint(watched.position);
+        bool inside = area.OverlapPoint(TestPoint());
+        // Pass 7 (jump-aware zones): watched.position -> TestPoint(). During a jump this is the
+        // takeoff floor point, so the player never "leaves" the zone just by going up.
+        // Unity Script API - Collider2D.OverlapPoint: https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Collider2D.OverlapPoint.html
 
         if (inside && !wasInside)
         {
@@ -161,6 +206,18 @@ public class InterceptZone : MonoBehaviour
         }
 
         wasInside = inside;
+
+        RefreshReadout();
+        // Pass 8 (sort readout): ADDED. Called LAST so the Inspector shows the order after
+        // this frame's SetOrder/Restore have run.
+    }// end of function >:D
+
+    // Pass 8 (sort readout): ADDED. Its own method so Update stays about zone logic, and the
+    // readout can be deleted later by removing this method, its one call, and the field.
+    private void RefreshReadout()
+    {
+        for (int i = 0; i < resolved.Length; i++)
+            currentOrders[i] = resolved[i].sortingOrder;
     }// end of function >:D
 
     private void SetOrder(int order)

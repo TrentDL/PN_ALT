@@ -520,6 +520,13 @@ public class PlayerControl4 : MonoBehaviour
 
         LogAreaChange(previous, area);
 
+        // ADDED (sort pass): tell the areas. Exit BEFORE enter, so if both areas sort
+        // the same sprite, the new one captures the restored original, not the old
+        // area's order. Enter is called even when area == previous (as at Start):
+        // GroundArea ignores a repeat, and this way starting ON a sorting area works.
+        if (previous != null && previous != area) previous.PlayerExited();
+        if (area != null) area.PlayerEntered();
+
         // REMOVED (root only pass): ApplyHeights(), and the gapTime / shadowGround /
         // SetShadowVisible lines. The next ApplyMovement draws the new height.
 

@@ -98,6 +98,23 @@
 //      flag keeps a player who is INSIDE from leaving; this keeps a player who is
 //      OUTSIDE from entering. The two are mutually exclusive per frame - the loop
 //      guards on Contains(current) - so they cannot share one bool.
+//
+// ADDED (sort pass): sortTargets, sortOrderWhileOn, PlayerEntered(), PlayerExited().
+// WHY HERE and not a polygon test: the player ALREADY decides which area it stands on
+//      (PlayerControl4.SetArea). Asking "is a point inside?" again would be a second,
+//      separate answer that can disagree - which is what happened with InterceptZone
+//      watching the shadow. The area is simply TOLD when it is stood on.
+// WHY THIS SURVIVES JUMPING: SetArea is not called while airborne, so a hop off the
+//      boxes keeps them "stood on" until the player actually lands somewhere else.
+//
+// CHANGED (layer pass): sortTargets is now SortEntry[] instead of Renderer[], and
+//      sortOrderWhileOn + ordersBeforeEntry are gone. Each entry carries its own
+//      sprite, Sorting Layer and Order in Layer, and remembers its own originals.
+// WHY: one shared order could not give two sprites different values. Bundling the
+//      three settings into one entry keeps them from drifting out of step - three
+//      parallel arrays (renderers, layers, orders) could be different lengths.
+// NOTE: changing the field's type clears what was dragged into Sort Targets before.
+//      Re-assign it once in the Inspector.
 
 using System.Collections.Generic;
 using UnityEngine;
@@ -256,6 +273,32 @@ public class GroundArea : PolygonArea
     [Tooltip("ON (default): a fall rejects tiles above the player and drops to whatever is genuinely below. OFF: restores the old JumpTarget-only landing, which can hide a floor under a raised platform.")]
     public bool dropTarget = true;
 
+    [Header("Sorting While On")]
+    // ADDED (sort pass): sprites whose Order in Layer changes while the player stands
+    // on this area. Leave empty and this area never touches sorting.
+    // WHY Renderer and not SpriteRenderer: Renderer is the parent type, so any renderer
+    // fits (polymorphism). Dragging a GameObject in assigns the renderer ON it - if the
+    // sprite is on a child, drag the child.
+    // CHANGED (layer pass): Renderer[] -> SortEntry[]. Each element now holds its own
+    // sprite, Sorting Layer and Order in Layer. See SortEntry at the bottom of this file.
+    [Tooltip("Sprites to re-sort while the player stands here, each with its own layer and order. Empty = no sorting.")]
+    public SortEntry[] sortTargets;
+
+    // ADDED (sort pass): same scale as the Sprite Renderer's Order in Layer box.
+    // REMOVED (layer pass): public int sortOrderWhileOn - replaced by SortEntry.orderInLayer,
+    // so each sprite has its own number.
+
+    // ADDED (sort pass): whatever the sprites had when the player arrived, put back on
+    // leave. Captured at entry rather than at startup, so the area restores the value
+    // that was actually there - not one from minutes ago.
+    // REMOVED (layer pass): private int[] ordersBeforeEntry - each SortEntry now saves its
+    // own original layer and order (encapsulation: the entry owns its own undo). The
+    // capture-at-entry rule above still holds.
+
+    // ADDED (sort pass): guards against applying twice (which would capture OUR order
+    // as the "original") or restoring something never changed.
+    private bool sortApplied = false;
+
     [Header("Debug Visualization")]
     // ADDED (walkable preview): draws this area's polygon lifted to its own
     // elevation, so the Scene view shows where the player will actually STAND
@@ -397,6 +440,37 @@ public class GroundArea : PolygonArea
         All.Remove(this);   // ADDED: keeps the list clean on scene unload / disable
     }// end of function >:D
 
+    /// <summary>Called by the player when it adopts this area. Applies sortOrderWhileOn.</summary>
+    // ADDED (sort pass): runs once per arrival, never per frame. Null entries are
+    // skipped here instead of being cleaned up front - two calls per visit is too
+    // rare for the check to cost anything.
+    // Unity Script API - Renderer.sortingOrder: https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer-sortingOrder.html
+    public void PlayerEntered()
+    {
+        if (sortApplied || sortTargets == null || sortTargets.Length == 0) return;
+
+        // CHANGED (layer pass): each entry saves and applies itself. The loop no longer
+        // needs to know WHAT is being changed - add a setting to SortEntry later and
+        // this loop stays the same.
+        for (int i = 0; i < sortTargets.Length; i++)
+            sortTargets[i].Apply();
+
+        sortApplied = true;
+    }// end of function >:D
+
+    /// <summary>Called by the player when it leaves this area. Restores the captured orders.</summary>
+    // ADDED (sort pass): the exact mirror of PlayerEntered.
+    public void PlayerExited()
+    {
+        if (!sortApplied) return;
+
+        // CHANGED (layer pass): each entry restores its own saved layer and order.
+        for (int i = 0; i < sortTargets.Length; i++)
+            sortTargets[i].Restore();
+
+        sortApplied = false;
+    }// end of function >:D
+
     /// <summary>This area's height at a world position. Flat areas ignore the argument.</summary>
     // ADDED (ramp pass): the ONE place elevation is resolved. Callers must use this
     // rather than the field, or a ramped area silently behaves as flat.
@@ -476,4 +550,46 @@ public enum SurfaceType
     JumpWall,   // solid on foot, clears in air   - yellow
     Pit,        // fall in, or jump across        - red
     JumpZone    // land on it, never fall through - cyan
+}
+
+[System.Serializable]
+public class SortEntry
+{
+    [Tooltip("The sprite to re-sort. Drag the object that HAS the Sprite Renderer (a child, if the sprite is on one).")]
+    public Renderer target;
+
+    // Typed name rather than a dropdown - a dropdown needs a custom editor script, which
+    // is more code than this feature is worth for now.
+    [Tooltip("Sorting Layer while on. Leave EMPTY to keep the sprite's current layer. " +
+             "Must match Project Settings > Tags and Layers exactly, capitals included.")]
+    public string sortingLayer = "";
+
+    [Tooltip("Order in Layer while on. Same box as on the Sprite Renderer.")]
+    public int orderInLayer = 0;
+
+    // What the sprite had before Apply. Private, so Unity does not show or save them -
+    // they only mean something during play, between an Apply and its Restore.
+    // The layer is saved as its ID, not its name: the ID still points to the right
+    // layer even if you rename it in Tags and Layers.
+    private int savedLayerID;
+    private int savedOrder;
+
+    public void Apply()
+    {
+        if (target == null) return;   // empty row - skip it
+
+        savedLayerID = target.sortingLayerID;
+        savedOrder = target.sortingOrder;
+
+        if (!string.IsNullOrEmpty(sortingLayer)) target.sortingLayerName = sortingLayer;
+        target.sortingOrder = orderInLayer;
+    }// end of function >:D
+
+    public void Restore()
+    {
+        if (target == null) return;
+
+        target.sortingLayerID = savedLayerID;
+        target.sortingOrder = savedOrder;
+    }// end of function >:D
 }
