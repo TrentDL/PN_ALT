@@ -14,6 +14,9 @@
 // the Cubism interceptor. AnimationZone now drives individual Renderers.
 // Pass 5 (SpriteRenderer target): now drives Renderer.sortingOrder (the "Order in Layer"
 // box on a Sprite Renderer) instead of a SortingGroup.
+// Pass 6 (fade suppression): ADDED the read-only IsApplied property, so PlayerVisibility
+// can ask "has this zone pushed my sprite behind the player right now?" without
+// duplicating the polygon test. Nothing about how the zone sorts has changed.
 
 using UnityEngine;
 // Pass 3 (Live2D removal): replaced the Cubism interceptor namespace with Unity's own.
@@ -59,6 +62,17 @@ public class InterceptZone : MonoBehaviour
     // Pass 5 (SpriteRenderer target): SortingGroup[] -> Renderer[]. Renderer is the parent type of
     // SpriteRenderer, so a Sprite Renderer fits (polymorphism).
     private int[] originalOrders;                 // whatever was authored, captured not hardcoded
+
+    // Pass 6 (fade suppression): ADDED. True from the first SetOrder until Restore puts the
+    // authored order back - so it also stays true during restoreDelay, while the player is
+    // still drawn in front.
+    // WHY "get; private set;": anyone may READ it, only this script may CHANGE it
+    // (encapsulation). Another script cannot switch the flag on by mistake.
+    // WHY NOT reuse wasInside: wasInside goes false the moment the player steps out, but the
+    // sorting order is held for restoreDelay longer. This tracks the renderers, not the player.
+    // Microsoft C# - auto-implemented properties: https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/auto-implemented-properties
+    // Microsoft C# - restricting accessor accessibility: https://learn.microsoft.com/en-us/dotnet/csharp/programming-guide/classes-and-structs/restricting-accessor-accessibility
+    public bool IsApplied { get; private set; }
 
     void Awake()
     {
@@ -154,6 +168,10 @@ public class InterceptZone : MonoBehaviour
         for (int i = 0; i < resolved.Length; i++)
             resolved[i].sortingOrder = order;
         // Pass 3 (Live2D removal): SortingOrder -> sortingOrder.
+
+        IsApplied = true;
+        // Pass 6 (fade suppression): ADDED. Set HERE rather than in Update so the flag can
+        // only be true when the renderers really were changed - one writer, one place to look.
     }// end of function >:D
 
     private void Restore()
@@ -161,6 +179,10 @@ public class InterceptZone : MonoBehaviour
         for (int i = 0; i < resolved.Length; i++)
             resolved[i].sortingOrder = originalOrders[i];
         // Pass 3 (Live2D removal): SortingOrder -> sortingOrder.
+
+        IsApplied = false;
+        // Pass 6 (fade suppression): ADDED. The authored order is back, so the sprite can
+        // hide the player again - PlayerVisibility may fade it from here on.
     }// end of function >:D
 
     void OnDrawGizmos()

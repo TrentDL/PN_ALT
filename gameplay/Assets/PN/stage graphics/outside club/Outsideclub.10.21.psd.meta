@@ -122,6 +122,50 @@ ScriptedImporter:
     tessellationDetail: 0
     uvTransform: {x: 4, y: 4}
     spritePosition: {x: 0, y: 0}
+  - name: truck boxes2
+    originalName: 
+    pivot: {x: 0.5, y: 0.5}
+    alignment: 0
+    border: {x: 0, y: 0, z: 0, w: 0}
+    customData: 
+    rect:
+      serializedVersion: 2
+      x: 6500
+      y: 6250
+      width: 447
+      height: 331
+    spriteID: 7b47c473876839b4f84e1b7276ebf1fe
+    spriteBone: []
+    spriteOutline: []
+    vertices: []
+    spritePhysicsOutline: []
+    indices: 
+    edges: []
+    tessellationDetail: 0
+    uvTransform: {x: 6500, y: 6250}
+    spritePosition: {x: 892, y: 343}
+  - name: boxes
+    originalName: 
+    pivot: {x: 0.5, y: 0.5}
+    alignment: 0
+    border: {x: 0, y: 0, z: 0, w: 0}
+    customData: 
+    rect:
+      serializedVersion: 2
+      x: 6500
+      y: 6589
+      width: 661
+      height: 920
+    spriteID: 0ed4eb9ffbaafaf42b47635bc280aa81
+    spriteBone: []
+    spriteOutline: []
+    vertices: []
+    spritePhysicsOutline: []
+    indices: 
+    edges: []
+    tessellationDetail: 0
+    uvTransform: {x: 6500, y: 6589}
+    spritePosition: {x: 1102, y: 1044}
   - name: Vents
     originalName: 
     pivot: {x: 0.5, y: 0.5}
@@ -134,7 +178,7 @@ ScriptedImporter:
       y: 4
       width: 827
       height: 792
-    spriteID: 4574077f58963b442938218fed957a51
+    spriteID: c5c6805f04021cf4daab804bcd48c97e
     spriteBone: []
     spriteOutline: []
     vertices: []
@@ -153,7 +197,7 @@ ScriptedImporter:
     rect:
       serializedVersion: 2
       x: 7279
-      y: 3771
+      y: 3809
       width: 707
       height: 261
     spriteID: cc3331e15547f0a48bd81ed2b42906f0
@@ -164,7 +208,7 @@ ScriptedImporter:
     indices: 
     edges: []
     tessellationDetail: 0
-    uvTransform: {x: 7279, y: 3771}
+    uvTransform: {x: 7279, y: 3809}
     spritePosition: {x: 2363, y: 1298}
   - name: Sign
     originalName: 
@@ -481,12 +525,42 @@ ScriptedImporter:
     flatten: 0
     isImported: 1
     isVisible: 1
+  - name: Layer 1
+    spriteName: 
+    isGroup: 0
+    parentIndex: -1
+    spriteID: d3e6e72f33c390f47a04a6c7f90786ac
+    layerID: 0
+    mosaicPosition: {x: 0, y: 0}
+    flatten: 0
+    isImported: 0
+    isVisible: 0
+  - name: truck boxes2
+    spriteName: truck boxes2
+    isGroup: 0
+    parentIndex: -1
+    spriteID: 7b47c473876839b4f84e1b7276ebf1fe
+    layerID: 1675573442
+    mosaicPosition: {x: 6500, y: 6250}
+    flatten: 0
+    isImported: 1
+    isVisible: 1
+  - name: boxes
+    spriteName: boxes
+    isGroup: 0
+    parentIndex: -1
+    spriteID: 0ed4eb9ffbaafaf42b47635bc280aa81
+    layerID: 1601799831
+    mosaicPosition: {x: 6500, y: 6589}
+    flatten: 0
+    isImported: 1
+    isVisible: 1
   - name: Vents
     spriteName: Vents
     isGroup: 0
     parentIndex: -1
-    spriteID: 4574077f58963b442938218fed957a51
-    layerID: 0
+    spriteID: c5c6805f04021cf4daab804bcd48c97e
+    layerID: -683606094
     mosaicPosition: {x: 7224, y: 4}
     flatten: 0
     isImported: 1
@@ -497,7 +571,7 @@ ScriptedImporter:
     parentIndex: -1
     spriteID: cc3331e15547f0a48bd81ed2b42906f0
     layerID: 921904999
-    mosaicPosition: {x: 7279, y: 3771}
+    mosaicPosition: {x: 7279, y: 3809}
     flatten: 0
     isImported: 1
     isVisible: 1
