@@ -11,6 +11,7 @@ using UnityEngine;
 public class LedgeSafetyTeetering : MonoBehaviour
 {
     private string TeeterTime = "walk";
+    
 
     
     // Start is called once before the first execution of Update after the MonoBehaviour is created
