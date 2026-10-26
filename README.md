@@ -1,2 +1,2 @@
 # PN_ALT
-using 3d space instead of strict 2D rules
+this repository has more 3D elements instead of strict 2D elements
