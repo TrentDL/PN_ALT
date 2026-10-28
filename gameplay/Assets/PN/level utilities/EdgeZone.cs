@@ -1,30 +1,3 @@
-// EdgeZone.cs
-//
-// ADDED: line-based rules, as a companion to GroundArea rather than a subclass.
-//
-// WHY NOT PolygonArea: EdgeCollider2D is an open polyline with no interior, so
-//      OverlapPoint is always false on it. Contains() - which RulingAreaAt,
-//      AreaAt, TileStep and the movement lock are all built on - cannot work.
-//      Inheriting would have handed every one of those callers a component that
-//      silently answers "no" to everything.
-//
-// WHAT IT ANSWERS INSTEAD: not "what is the ground at this point" but "may I
-//      cross this line this frame". That is a segment-vs-segment test between the
-//      player's current and desired positions, which is exactly the right shape
-//      for one-way ledges and jump-only walls.
-//
-// THE BOOLS, re-read for a line:
-//      canJumpOver     - crossing is allowed while airborne
-//      canFallThrough  - crossing is allowed while FALLING specifically
-//      Both off        - solid line, never crossed
-//      Both on         - crossable in the air, blocked on foot
-//
-//      canFallThrough alone is the one-way ledge: walk into it and stop, fall
-//      through it from above. Note this is a deliberately different reading from
-//      GroundArea, where the same bool means "there is no floor here".
-//
-// NOT INCLUDED: lockMovementInside and elevation. A line has no inside to lock
-//      you into and no surface to stand on, so both would be dead fields.
 
 using System.Collections.Generic;
 using UnityEngine;
@@ -50,6 +23,12 @@ public class EdgeZone : MonoBehaviour
 
     [Tooltip("ON: the player can cross this line while falling. A one-way ledge on its own.")]
     public bool canFallThrough = false;
+
+    // ADDED (slide pass): see header. Per edge, not on the player, so a sticky
+    // wall and a slippery wall can sit in the same scene.
+    [Header("Sliding")]
+    [Tooltip("ON: a blocked move slides along this line. OFF: the player stops dead at the line (old behaviour).")]
+    public bool slideAlongEdge = true;
 
     [Header("Overlap")]
     // ADDED: matches GroundArea.priority in spirit - highest wins when lines cross
@@ -116,19 +95,65 @@ public class EdgeZone : MonoBehaviour
     // one: it cannot be tunnelled through at low frame rates or high speeds.
     public bool CrossedBy(Vector2 from, Vector2 to)
     {
-        if (Edge == null) return false;
+        // CHANGED (slide pass): the loop that was here moved into CrossedSpan, so
+        // the slide can ask WHICH span was hit. One loop, two users (DRY).
+        // -1 means "no span crossed", so anything 0 or above is a hit.
+        return CrossedSpan(from, to) >= 0;
+    }// end of function >:D
 
+    // ADDED (slide pass): the old CrossedBy loop, returning the index of the first
+    // span crossed instead of true/false. Span i runs from point i to point i + 1.
+    private int CrossedSpan(Vector2 from, Vector2 to)
+    {
+        if (Edge == null) return -1;
+
+        // Read ONCE: Edge.points hands back a fresh copy of the array on every read.
         Vector2[] points = Edge.points;
 
         for (int i = 0; i < points.Length - 1; i++)
         {
-            Vector2 a = transform.TransformPoint(points[i] + Edge.offset);
-            Vector2 b = transform.TransformPoint(points[i + 1] + Edge.offset);
-
-            if (SegmentsCross(from, to, a, b)) return true;
+            if (SegmentsCross(from, to, WorldPoint(points, i), WorldPoint(points, i + 1))) return i;
         }
 
-        return false;
+        return -1;
+    }// end of function >:D
+
+    // ADDED (slide pass): one point of the line in world space. Was written out
+    // twice inside the CrossedBy loop; the slide needs it too (DRY).
+    private Vector2 WorldPoint(Vector2[] points, int i)
+    {
+        return transform.TransformPoint(points[i] + Edge.offset);
+    }// end of function >:D
+
+    // ADDED (slide pass): what the player should do once this edge blocks them.
+    // Slide OFF: same as before - stop at the line.
+    // Slide ON:  stop at the line, then spend the rest of the move travelling
+    //            ALONG the line. Falls back to stopping if the slide would still
+    //            cross this line (e.g. pushing into an inside corner of it).
+    public Vector2 Resolve(Vector2 from, Vector2 to)
+    {
+        Vector2 stop = StopShortOf(from, to);
+        if (!slideAlongEdge) return stop;
+
+        int span = CrossedSpan(from, to);
+        if (span < 0) return stop;   // nothing was crossed after all - nothing to slide on
+
+        Vector2[] points = Edge.points;
+
+        // 'along' = the wall's direction, shrunk to length 1 (normalized), so it
+        // only carries direction, not distance.
+        Vector2 along = (WorldPoint(points, span + 1) - WorldPoint(points, span)).normalized;
+
+        // The bit of the move that was cut off by stopping early.
+        Vector2 leftover = to - stop;
+
+        // Dot = "how much of 'leftover' points the same way as the wall". Multiply
+        // it back onto the wall's direction and you get only the sideways part.
+        // Pushing straight into the wall gives 0 - no slide, just like a real wall.
+        Vector2 slid = stop + along * Vector2.Dot(leftover, along);
+
+        if (CrossedBy(from, slid)) return stop;
+        return slid;
     }// end of function >:D
 
     /// <summary>Where along 'from->to' the crossing happens, pulled back just short of the line.</summary>

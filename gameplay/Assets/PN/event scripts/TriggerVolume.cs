@@ -42,8 +42,11 @@ public class TriggerVolume : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other) // CHANGED (2D pass): was OnTriggerEnter(Collider other)
     {
+        /* Debug.Log($"[{name}] touched by {other.name} (tag: {other.tag}) on frame {Time.frameCount}", this); */
+
         if (!other.CompareTag("Player")) return;
         if (triggered && !canBeTriggeredMultipleTimes) return;
+         /* Debug.Break(); */
 
         triggered = true;
         playerEnteredTriggerVolume?.Invoke();

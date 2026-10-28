@@ -1,70 +1,5 @@
 // PlayerControl4.cs
-//
-// ADDED (root only pass): a copy of PlayerControl3 where ONE object moves - the
-// root this script sits on (playerAlt). Made as a separate class so PlayerControl3
-// stays untouched for comparison. Unity needs the file name to match the class name.
-//
-// THE IDEA, in one line:
-//      root position = groundPosition + (elevation + jumpYOffset) * 5.349
-//
-//      groundPosition - the chalk mark on the floor (left/right and depth)
-//      elevation      - how high the floor under you is
-//      jumpYOffset    - extra height from the jump, only while rising
-//      5.349          - GroundArea.ElevationToWorld, elevation units -> scene units
-//
-// WHY THIS FIXES THE JUMP: at the top of a jump, jumpYOffset is moved INTO
-//      elevation and then reset to 0. One goes up by exactly what the other goes
-//      down, so their SUM - the only thing the root reads - does not change. No
-//      hand-off between two objects, so nothing can pop or dip.
-//
-// REMOVED from PlayerControl3:
-//   * visualRoot, visualStartLocalPos and the "visualRoot is not assigned" check.
-//     VisualsRoot is no longer moved by script - it simply rides inside the root.
-//   * playerShadow, shadowStartScale, shadowStartLocalPos, shadowHideDelay,
-//     gapTime, shadowGround and SetShadowVisible - all of the platform shadow.
-//   * ApplyHeights and ToLocalLift. ApplyHeights only existed to move visualRoot
-//     and the shadow; ToLocalLift only existed to undo the root's scale for those
-//     children. With no children to move, neither has a job. That also removes
-//     every division by currentScale, which is where the "too high, then snap"
-//     bug came from.
-//   * liftRootWithElevation. This script ALWAYS lifts the root - that is its point.
-//     For the old behaviour, use PlayerControl3 with the toggle off.
-//   * The long change-history header. It is still in PlayerControl3.cs.
-//
-// CHANGED:
-//   * PlaceRoot adds jumpYOffset (see THE IDEA above).
-//   * PlaceRoot is called from ONE place only: the end of ApplyMovement, which
-//     runs every frame. The jump and fall only change the numbers; ApplyMovement
-//     draws them. One writer = one place to look when debugging.
-//   * LogVisualHeight -> LogHeight. It reported visualRoot; now it reports the root.
-//
-// KEPT, unchanged: walking, sprint, dash hookup, facing, areas, walls, edges,
-//   pits, ramps, the variable jump, falling, landing, fall-floor recovery and
-//   depth scaling. Every rules lookup still reads groundPosition, never the
-//   lifted root - see the DEPTH note in TileStep.cs for why.
-//
-// SIDE EFFECTS to expect: every child of the root (VisualsRoot, GroundPoint,
-//   Circle, ItemHolder, PlayerUI) and any collider on it now rise with the jump.
-//   A shadow child will rise too - disable it until the shadow comes back.
-//
-// ADDED (unnested shadow pass): the platform shadow is back, as a SEPARATE scene
-//   object - not a child of the root. WHY: a child rides up with the jump and
-//   inherits the root's scale, which is what forced the old divide-by-scale maths.
-//   A separate object is simply PLACED in the world each frame, so neither applies.
-//   * PlaceShadow() - the one place the shadow is written. Called right after
-//     PlaceRoot, so the player and its shadow are always drawn from the same numbers.
-//   * Position: the footprint, lifted to the height of the ground UNDER the player
-//     (not the player's own height) - so it stays on the floor during a jump.
-//   * Hidden over a gap, after shadowHideDelay so narrow gaps do not flicker. Same
-//     rule as PlayerControl3, but the timer now lives in PlaceShadow instead of
-//     being repeated in both coroutines (DRY).
-//   * Size: shadowSize * the player's current scale, shrunk a little the higher
-//     the player is - same shrink formula as PlayerControl3.
-//   * The coroutines only choose WHICH ground the shadow sits on (shadowGround);
-//     they no longer draw anything.
-//   FIXED with it: currentScale now starts from the scene's scale instead of 1f.
-//   The shadow multiplies by it, so a freeze area entered at startup would otherwise
-//   shrink the shadow to scale 1 until the freeze ended.
+
 
 using System.Collections;
 using UnityEngine;
@@ -347,10 +282,24 @@ public class PlayerControl4 : MonoBehaviour
                 desired = BoundsZone.ClampToBounds(desired, "player");
         }
 
-        // elevation + jumpYOffset, not elevation: elevation is frozen at the takeoff
-        // height while rising, so a height gate could never open mid-jump otherwise.
-        EdgeZone blocker = EdgeZone.Blocker(current, desired, isJumping || isFalling, isFalling, elevation + jumpYOffset);
-        if (blocker != null) desired = blocker.StopShortOf(current, desired);
+        // ADDED (slide pass): the three Blocker inputs stored once - both calls
+        // below need exactly the same values (DRY).
+        bool airborne = isJumping || isFalling;
+        float playerHeight = elevation + jumpYOffset;
+
+        EdgeZone blocker = EdgeZone.Blocker(current, desired, airborne, isFalling, playerHeight);
+        if (blocker != null)
+        {
+            // CHANGED (slide pass): Resolve instead of StopShortOf - stops OR slides,
+            // depending on that edge's slideAlongEdge checkbox.
+            desired = blocker.Resolve(current, desired);
+
+            // ADDED (slide pass): sliding can carry you into a DIFFERENT edge where
+            // two edges meet at a corner. One re-check; if it hits, just stop there.
+            // Without this, a slide could push you through the second wall.
+            EdgeZone second = EdgeZone.Blocker(current, desired, airborne, isFalling, playerHeight);
+            if (second != null) desired = second.StopShortOf(current, desired);
+        }
 
         for (int i = 0; i < GroundArea.All.Count; i++)
         {
@@ -456,6 +405,33 @@ public class PlayerControl4 : MonoBehaviour
             rb.MovePosition(drawn);
         else
             transform.position = new Vector3(drawn.x, drawn.y, transform.position.z);
+    }// end of function >:D
+
+
+    // ADDED (reset pass): puts the player's footprint on 'point' as if they had just
+    // been placed there in the scene. Used by PlayerStart's debug key.
+    // 'point' is a FLOOR position (like the scene start), not a lifted root position.
+    // It does NOT move the root itself - the next ApplyMovement -> PlaceRoot does that.
+    public void ResetTo(Vector2 point)
+    {
+        // 1. Cancel any jump or fall in progress. Without this, a running
+        //    FallCoroutine would keep lowering elevation and could "land" the player
+        //    back where they were. Note: stops EVERY coroutine started on this script.
+        StopAllCoroutines();
+
+        // 2. Clear the airborne numbers the coroutines would normally clean up.
+        isJumping = false;
+        isFalling = false;
+        jumpYOffset = 0f;
+        jumpMomentum = Vector2.zero;
+
+        // 3. Move the footprint, then reuse SetArea (DRY) - it already sets the
+        //    elevation, the safe spot, the scale freeze, the sorting enter/exit
+        //    and the shadow's ground. Same two lines Start uses.
+        groundPosition = point;
+        SetArea(GroundArea.AreaAt(groundPosition));
+
+        LogHeight("reset");
     }// end of function >:D
 
 
