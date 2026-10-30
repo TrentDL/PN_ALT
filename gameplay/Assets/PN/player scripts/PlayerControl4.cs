@@ -521,6 +521,16 @@ public class PlayerControl4 : MonoBehaviour
     }
 
 
+
+    private void UpdateAnimations()
+    {
+        /*TODOS
+        logic similar to updateFacing that uses a list
+        
+        */
+    }
+
+
     private void DetectDoubleTap()
     {
         if (Input.GetKeyDown(sprintKeyLeft))

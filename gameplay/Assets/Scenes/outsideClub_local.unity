@@ -289,7 +289,7 @@ MonoBehaviour:
     orderInLayer: -420
   - target: {fileID: 463959453}
     sortingLayer: 
-    orderInLayer: -83
+    orderInLayer: -154
   - target: {fileID: 1088987339}
     sortingLayer: 
     orderInLayer: -83
@@ -3597,7 +3597,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1072743317222285542, guid: e9b6407b416f8024e9621700e58b50df, type: 3}
       propertyPath: m_SortingOrder
-      value: -1223
+      value: -1231
       objectReference: {fileID: 0}
     - target: {fileID: 1852299366432250427, guid: e9b6407b416f8024e9621700e58b50df, type: 3}
       propertyPath: m_Color.a
@@ -3621,7 +3621,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5378099597153261374, guid: e9b6407b416f8024e9621700e58b50df, type: 3}
       propertyPath: m_SortingOrder
-      value: -1224
+      value: -1234
       objectReference: {fileID: 0}
     - target: {fileID: 6200155690118484603, guid: e9b6407b416f8024e9621700e58b50df, type: 3}
       propertyPath: m_SortingOrder
@@ -3633,7 +3633,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7384040209679696129, guid: e9b6407b416f8024e9621700e58b50df, type: 3}
       propertyPath: m_SortingOrder
-      value: -1222
+      value: -1226
       objectReference: {fileID: 0}
     - target: {fileID: 8247260003190441854, guid: e9b6407b416f8024e9621700e58b50df, type: 3}
       propertyPath: m_SortingOrder
@@ -5237,6 +5237,10 @@ PrefabInstance:
     - target: {fileID: 3140107504442502493, guid: 0c5b3d918de4bc040b6acc09b2ac3e32, type: 3}
       propertyPath: m_Name
       value: WorldCameras
+      objectReference: {fileID: 0}
+    - target: {fileID: 7288421298662877188, guid: 0c5b3d918de4bc040b6acc09b2ac3e32, type: 3}
+      propertyPath: orthographic size
+      value: 5.64
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
