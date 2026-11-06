@@ -9,6 +9,7 @@
 //   - Boundary / area / edge / gate checks, groundPosition, elevation, lastSafe*:
 //     3D colliders now block the player, and the controller finds the floor itself.
 //   - Shadow logic: removed as requested.
+//     ADDED (shadow 3D pass): brought back, rebuilt for 3D - see PlaceShadow.
 //   - FixedUpdate + Rigidbody2D path: the CharacterController moves in Update only.
 //   - logAreaChanges: there are no areas any more.
 
@@ -74,6 +75,31 @@ public class PlayerControls3D : MonoBehaviour
 
     [Tooltip("World units per second squared. Higher = heavier.")]
     public float fallAcceleration = 20f;
+
+    // ADDED (shadow 3D pass): brought back from PlayerControl4 so the player's spot on the
+    // ground is easy to follow while jumping. Same fields, minus the perspective scale
+    // (the 3D camera does that now), plus two new ones for the raycast (see PlaceShadow).
+    [Header("Shadow")]
+    [Tooltip("A SEPARATE scene object, NOT a child of the player. Rotate it once in the scene so it " +
+             "lies flat on the floor (a sprite usually needs Rotation X = 90). Leave empty for no shadow.")]
+    public Transform playerShadow;
+
+    [Tooltip("Shadow scale while standing on the ground.")]
+    public Vector3 shadowSize = Vector3.one;
+
+    [Tooltip("Nudge from the spot under the player. X = left/right, Y = toward/away from the camera (world Z).")]
+    public Vector2 shadowOffset = Vector2.zero;
+
+    [Tooltip("Seconds over open space before the shadow is hidden. 0 = hide the instant there is no ground below.")]
+    public float shadowHideDelay = 0.08f;
+
+    [Tooltip("How far down to look for ground. Anything further below counts as open space.")]
+    public float shadowMaxDistance = 50f;
+
+    [Tooltip("Lift off the surface so the shadow does not flicker into the floor.")]
+    public float shadowLift = 0.02f;
+
+    private float gapTime = 0f;   // how long there has been nothing below
 
     [Tooltip("Keep moving at takeoff speed if the movement keys are released mid-jump. Off = hard stop in the air.")]
     public bool JumpCarryOver = true;
@@ -149,6 +175,14 @@ public class PlayerControls3D : MonoBehaviour
             Debug.LogWarning("PlayerControls3D: remove Rigidbody2D / Collider2D / Rigidbody from the player - " +
                              "the CharacterController does their job in 3D.", this);
         }
+
+        // ADDED (shadow 3D pass): a nested shadow would rise with the jump instead of
+        // staying on the ground. Same check PlayerControl4 had.
+        if (playerShadow != null && playerShadow.IsChildOf(transform))
+        {
+            Debug.LogWarning("PlayerControls3D: playerShadow is a child of the player. " +
+                             "Drag it out of the player in the Hierarchy so it stays on the ground.", this);
+        }
     }//end of function >:D
 
 
@@ -209,7 +243,52 @@ public class PlayerControls3D : MonoBehaviour
         wasGrounded = grounded;
 
         if (transform.position.y < fallFloorY) ResetTo(startPosition);
+
+        PlaceShadow(deltaTime);   // ADDED (shadow 3D pass): after the move, so it uses this frame's position
     }//end of function >:D
+
+
+    // ADDED (shadow 3D pass): the ONE place the shadow is written. Same three jobs as
+    // PlayerControl4: hide it over a gap, put it on the ground, size it.
+    // The difference: instead of asking GroundArea how high the floor is, it shoots an
+    // invisible line (a raycast) straight down and uses the first surface it touches.
+    private void PlaceShadow(float deltaTime)
+    {
+        if (playerShadow == null) return;
+
+        // The line starts in the middle of the player's capsule, nudged by shadowOffset.
+        // A raycast ignores the collider it starts inside, so it never hits the player.
+        Vector3 rayStart = controller.bounds.center + new Vector3(shadowOffset.x, 0f, shadowOffset.y);
+
+        bool hasGround = Physics.Raycast(rayStart, Vector3.down, out RaycastHit hit,
+                                         shadowMaxDistance, Physics.DefaultRaycastLayers,
+                                         QueryTriggerInteraction.Ignore);
+
+        // 1. Hide over a gap, but only after shadowHideDelay so a narrow gap does not
+        //    make it flicker. gapTime counts up while there is nothing below.
+        gapTime = hasGround ? 0f : gapTime + deltaTime;
+        bool visible = hasGround || gapTime < shadowHideDelay;
+
+        if (playerShadow.gameObject.activeSelf != visible)
+            playerShadow.gameObject.SetActive(visible);
+
+        // Nothing below: it is either hidden, or in the short delay - leave it where it was.
+        if (!hasGround) return;
+
+        // 2. Put it on the ground. hit.point = where the line touched the surface.
+        //    hit.normal = the direction that surface faces (straight up on a flat floor),
+        //    so the small lift also works on ramps.
+        playerShadow.position = hit.point + hit.normal * shadowLift;
+
+        // 3. Size it. Same shrink as PlayerControl4: a full jump above the ground makes it
+        //    10% smaller. heightAboveGround / jumpHeight = "how much of a full jump am I
+        //    above the ground". Clamp01 keeps that between 0 and 1, so a long fall off a
+        //    tall platform stops at 10% smaller instead of shrinking past zero.
+        float heightAboveGround = controller.bounds.min.y - hit.point.y;   // bounds.min.y = the player's feet
+        float fraction = (jumpHeight > 0f) ? Mathf.Clamp01(heightAboveGround / jumpHeight) : 0f;
+
+        playerShadow.localScale = shadowSize * (1f - fraction * 0.1f);
+    }// end of function >:D
 
 
     // ADDED (3D pass): the ONE place verticalVelocity is decided each frame.
